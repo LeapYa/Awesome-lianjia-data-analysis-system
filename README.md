@@ -371,6 +371,8 @@ IP管理模块负责维护和轮换代理IP，主要功能包括：
 
 ## 联系方式
 
-项目维护者 - [您的姓名](mailto:youremail@example.com)
+项目维护者 - [LeapYa](mailto:leapya@foxmail.com)
+
+邮箱：leapya@foxmail.com
 
 项目链接: [https://github.com/yourusername/lianjia-rental-analysis](https://github.com/yourusername/lianjia-rental-analysis)
