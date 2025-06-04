@@ -947,16 +947,37 @@ def setup_driver():
                 }
         
         # 根据是否有代理信息，创建DrissionPage对象
+        # 检查环境变量决定是否使用headless模式
+        use_headless = os.getenv('CHROME_HEADLESS', 'false').lower() == 'true'
+        logger.info(f"Chrome headless模式: {use_headless}")
+        
         if proxy_config:
             # 设置代理相关配置
             co = ChromiumOptions()
+            # 根据环境变量配置headless模式
+            co.headless(use_headless)
+            # 添加Docker环境所需的配置
+            co.add_argument('--no-sandbox')
+            co.add_argument('--disable-dev-shm-usage')
+            co.add_argument('--disable-gpu')
+            co.add_argument('--remote-debugging-port=9222')
             co.set_proxy(proxy_config)
             page = ChromiumPage(co)
-            logger.info("DrissionPage已配置代理")
+            mode_text = "headless" if use_headless else "界面"
+            logger.info(f"DrissionPage已配置代理和{mode_text}模式")
         else:
             # 默认配置
-            page = ChromiumPage()
-            logger.info("DrissionPage未使用代理")
+            co = ChromiumOptions()
+            # 根据环境变量配置headless模式
+            co.headless(use_headless)
+            # 添加Docker环境所需的配置
+            co.add_argument('--no-sandbox')
+            co.add_argument('--disable-dev-shm-usage')
+            co.add_argument('--disable-gpu')
+            co.add_argument('--remote-debugging-port=9222')
+            page = ChromiumPage(co)
+            mode_text = "headless" if use_headless else "界面"
+            logger.info(f"DrissionPage已配置{mode_text}模式")
         
         # 设置窗口大小
         page.set.window.size(1920, 1080)

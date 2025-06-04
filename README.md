@@ -198,7 +198,13 @@ npm run serve
 3. 访问系统
    在浏览器中访问 `http://localhost:8080`
 
-## Docker部署指南
+> **⚠️ 初始登录信息**
+> 
+> 首次部署时的登录凭据：
+> - 用户名：`admin`
+> - 密码：`admin123`
+
+## Docker部署指南(可选)
 
 本项目提供了Docker Compose配置，支持在Linux系统上一键部署整个系统。
 
@@ -219,7 +225,7 @@ npm run serve
 1. 克隆代码仓库
    ```bash
    git clone https://github.com/LeapYa/Awesome-lianjia-data-analysis-system.git
-   cd Awesome-lianjia-data-analysis-system-main
+   cd Awesome-lianjia-data-analysis-system
    ```
 
 2. 启动服务
@@ -232,8 +238,14 @@ npm run serve
    ```
 
 3. 访问系统
-   - 前端界面: http://localhost:8080
+   - 前端界面: http://你的IP地址
    - API服务: http://localhost:8000
+
+> **⚠️ 初始登录信息**
+> 
+> 首次部署时的登录凭据：
+> - 用户名：`admin`
+> - 密码：`admin123`
 
 ### 服务管理
 
@@ -360,9 +372,9 @@ IP管理模块负责维护和轮换代理IP，主要功能包括：
 欢迎对本项目进行贡献！请遵循以下步骤：
 
 1. Fork本仓库
-2. 创建您的特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交您的更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
+2. 创建您的特性分支 (`git checkout -b feature/您的功能名称`)
+3. 提交您的更改 (`git commit -m '添加了什么功能'`)
+4. 推送到分支 (`git push origin feature/您的功能名称`)
 5. 打开一个Pull Request
 
 ## 许可证
@@ -371,6 +383,8 @@ IP管理模块负责维护和轮换代理IP，主要功能包括：
 
 ## 联系方式
 
-项目维护者 - [您的姓名](mailto:youremail@example.com)
+项目维护者 - [LeapYa](mailto:leapya@foxmail.com)
 
-项目链接: [https://github.com/yourusername/lianjia-rental-analysis](https://github.com/yourusername/lianjia-rental-analysis)
+邮箱：leapya@foxmail.com
+
+项目链接: [https://github.com/LeapYa/Awesome-lianjia-data-analysis-system](https://github.com/LeapYa/Awesome-lianjia-data-analysis-system)

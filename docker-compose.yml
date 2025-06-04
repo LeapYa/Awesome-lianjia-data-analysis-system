@@ -46,6 +46,7 @@ services:
       - DB_PASSWORD=123456
       - DB_NAME=rental_analysis
       - PYTHONUNBUFFERED=1
+      - CHROME_HEADLESS=true  # 设置为true启用headless模式，不设置或false则使用界面模式(默认)
     restart: unless-stopped
     networks:
       - app-network
