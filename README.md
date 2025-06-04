@@ -375,4 +375,4 @@ IP管理模块负责维护和轮换代理IP，主要功能包括：
 
 邮箱：leapya@foxmail.com
 
-项目链接: [https://github.com/yourusername/lianjia-rental-analysis](https://github.com/yourusername/lianjia-rental-analysis)
+项目链接: [https://github.com/LeapYa/Awesome-lianjia-data-analysis-system](https://github.com/LeapYa/Awesome-lianjia-data-analysis-system)
