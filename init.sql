@@ -841,7 +841,7 @@ COPY public.current_ip (id, ip, location, isp, country, region, city, last_chang
 -- Data for Name: house_info; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.house_info (id, house_id, task_id, title, price, location_qu, location_big, location_small, size, direction, room, floor, image, link, unit_price, room_count, hall_count, bath_count, crawl_time, url, layout, area, subway, district, community, city_code, publish_date, features, created_at, last_updated, image_url) FROM stdin;
+COPY public.house_info (id, house_id, task_id, title, price, location_qu, location_big, location_small, size, direction, room, floor, image, link, unit_price, room_count, hall_count, bath_count, crawl_time, layout, subway, city_code, publish_date, features, created_at, last_updated) FROM stdin;
 \.
 
 
