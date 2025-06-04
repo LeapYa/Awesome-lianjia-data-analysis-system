@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     xvfb \
     procps \
     curl \
+    postgresql-client \
     fonts-ipafont-gothic \
     fonts-wqy-zenhei \
     fonts-thai-tlwg \
@@ -28,14 +29,26 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# 下载并安装ChromeDriver
+# 下载并安装ChromeDriver - 使用固定版本避免API问题
 RUN CHROME_VERSION=$(google-chrome --version | grep -oP '(?<=Google Chrome )[0-9]+') \
-    && CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}") \
-    && wget -q "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip" \
-    && unzip chromedriver_linux64.zip \
-    && mv chromedriver /usr/local/bin/chromedriver \
+    && echo "检测到Chrome主版本: $CHROME_VERSION" \
+    && if [ "$CHROME_VERSION" -ge "131" ]; then \
+        CHROMEDRIVER_VERSION="131.0.6778.85"; \
+    elif [ "$CHROME_VERSION" -ge "130" ]; then \
+        CHROMEDRIVER_VERSION="130.0.6723.116"; \
+    elif [ "$CHROME_VERSION" -ge "129" ]; then \
+        CHROMEDRIVER_VERSION="129.0.6668.89"; \
+    else \
+        CHROMEDRIVER_VERSION="128.0.6613.137"; \
+    fi \
+    && echo "使用ChromeDriver版本: $CHROMEDRIVER_VERSION" \
+    && wget -q "https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip" \
+    && unzip chromedriver-linux64.zip \
+    && mv chromedriver-linux64/chromedriver /usr/local/bin/chromedriver \
     && chmod +x /usr/local/bin/chromedriver \
-    && rm chromedriver_linux64.zip
+    && rm -rf chromedriver-linux64.zip chromedriver-linux64 \
+    && echo "ChromeDriver安装完成，版本信息:" \
+    && chromedriver --version
 
 # 复制requirements.txt并安装Python依赖
 COPY requirements.txt .
