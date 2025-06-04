@@ -121,8 +121,8 @@
 1. 克隆代码仓库
 
 ```bash
-git clone https://github.com/yourusername/lianjia-rental-analysis.git
-cd lianjia-rental-analysis
+git clone https://github.com/LeapYa/Awesome-lianjia-data-analysis-system.git
+cd Awesome-lianjia-data-analysis-system
 ```
 
 2. 安装uv
@@ -218,8 +218,8 @@ npm run serve
 
 1. 克隆代码仓库
    ```bash
-   git clone https://github.com/yourusername/lianjia-rental-analysis.git
-   cd lianjia-rental-analysis
+   git clone https://github.com/LeapYa/Awesome-lianjia-data-analysis-system.git
+   cd Awesome-lianjia-data-analysis-system-main
    ```
 
 2. 启动服务
