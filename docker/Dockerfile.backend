@@ -54,12 +54,6 @@ RUN CHROME_VERSION=$(google-chrome --version | grep -oP '(?<=Google Chrome )[0-9
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 复制项目文件
-COPY . .
-
-# 创建必要的目录
-RUN mkdir -p logs screenshots verification_sessions verification_cookies captcha_data
-
 # 设置环境变量
 ENV PYTHONPATH=/app
 ENV DISPLAY=:99
