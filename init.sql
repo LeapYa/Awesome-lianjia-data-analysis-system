@@ -336,7 +336,7 @@ CREATE TABLE public.house_info (
     publish_date text,
     features text,
     created_at timestamp without time zone,
-    last_updated timestamp without time zone,
+    last_updated timestamp without time zone
 );
 
 ALTER TABLE public.house_info OWNER TO postgres;
