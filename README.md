@@ -17,7 +17,7 @@
     <a href="#贡献指南">贡献指南</a>
     <br />
     <br />
-    <a href="README_en.md">🌍 English</a> | <a href="README.md">🇨🇳 中文</a>
+    <a href="README_en.md">🌍 English</a> | <a href="README.md">🇨🇳 简体中文</a> | <a href="README_zh-TW.md">🇹🇼 繁體中文</a>
   </p>
   <p align="center">
    <img src="https://img.shields.io/npm/l/gitbook-plugin-mygitalk.svg" alt="Apache License">
