@@ -15,6 +15,9 @@
     <a href="#Docker部署指南">Docker部署</a>
     ·
     <a href="#贡献指南">贡献指南</a>
+    <br />
+    <br />
+    <a href="README_en.md">🌍 English</a> | <a href="README.md">🇨🇳 中文</a>
   </p>
   <p align="center">
    <img src="https://img.shields.io/npm/l/gitbook-plugin-mygitalk.svg" alt="Apache License">
