@@ -1220,7 +1220,7 @@ ALTER TABLE ONLY public.verification_session
 -- Name: house_info_url_city_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE UNIQUE INDEX house_info_url_city_idx ON public.house_info USING btree (url, city_code);
+CREATE UNIQUE INDEX house_info_url_city_idx ON public.house_info USING btree (link, city_code);
 
 
 --
