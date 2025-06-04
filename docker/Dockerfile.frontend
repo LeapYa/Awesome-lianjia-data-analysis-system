@@ -1,0 +1,35 @@
+# 构建阶段 - 使用Node.js 16构建Vue3应用
+FROM node:16 AS build
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制前端package.json和package-lock.json
+COPY frontend/package*.json ./
+
+# 安装依赖
+RUN npm install
+
+# 复制前端源代码
+COPY frontend/ .
+
+# 构建前端应用
+RUN npm run build
+
+# 部署阶段 - 使用Nginx托管前端应用
+FROM nginx:stable-alpine
+
+# 删除默认的nginx静态文件
+RUN rm -rf /usr/share/nginx/html/*
+
+# 从构建阶段复制构建产物到nginx目录
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# 复制nginx配置文件
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+
+# 暴露80端口
+EXPOSE 80
+
+# 启动nginx
+CMD ["nginx", "-g", "daemon off;"] 
