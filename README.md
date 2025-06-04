@@ -232,7 +232,7 @@ npm run serve
    ```
 
 3. 访问系统
-   - 前端界面: http://localhost:8080
+   - 前端界面: http://你的IP地址
    - API服务: http://localhost:8000
 
 ### 服务管理
@@ -360,9 +360,9 @@ IP管理模块负责维护和轮换代理IP，主要功能包括：
 欢迎对本项目进行贡献！请遵循以下步骤：
 
 1. Fork本仓库
-2. 创建您的特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交您的更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
+2. 创建您的特性分支 (`git checkout -b feature/您的功能名称`)
+3. 提交您的更改 (`git commit -m '添加了什么功能'`)
+4. 推送到分支 (`git push origin feature/您的功能名称`)
 5. 打开一个Pull Request
 
 ## 许可证
