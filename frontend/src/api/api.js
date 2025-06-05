@@ -21,6 +21,10 @@ api.interceptors.request.use(
       config.headers['Authorization'] = `Bearer ${token}`;
     }
     
+    // 添加语言标识头部
+    const language = localStorage.getItem('language') || 'zh-CN';
+    config.headers['Accept-Language'] = language;
+    
     // 如果是清除数据的请求，添加管理员角色头部
     if (config.url.includes('/settings/purge')) {
       config.headers['X-User-Role'] = 'admin';

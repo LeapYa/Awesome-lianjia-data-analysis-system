@@ -92,6 +92,7 @@ class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
+    language: Optional[str] = 'zh-CN'  # 添加语言参数
 
 class UserLogin(BaseModel):
     username: str
@@ -99,6 +100,7 @@ class UserLogin(BaseModel):
 
 class PasswordReset(BaseModel):
     email: EmailStr
+    language: Optional[str] = 'zh-CN'  # 添加语言参数
 
 class PasswordResetConfirm(BaseModel):
     email: EmailStr
@@ -117,6 +119,7 @@ class UserSettings(BaseModel):
     taskCompletionNotifications: bool = True
     theme: str = "light"
     dataSharing: bool = True
+    language: str = "zh-CN"  # 添加语言偏好字段
 
 class UserProfileUpdate(BaseModel):
     email: Optional[EmailStr] = None
@@ -129,6 +132,7 @@ class AvatarUpdate(BaseModel):
 class VerificationCodeRequest(BaseModel):
     email: EmailStr
     code_type: str = "email_verification"  # email_verification, password_reset
+    language: Optional[str] = 'zh-CN'  # 添加语言参数
 
 class VerificationCodeVerify(BaseModel):
     email: EmailStr
@@ -412,12 +416,11 @@ async def register(user_data: UserCreate):
         
         # 发送欢迎邮件
         try:
-            from email_utils import email_sender
-            email_sender.send_welcome_email(user_data.email, user_data.username)
-            logger.info(f"欢迎邮件已发送给用户: {user_data.email}")
+            email_sender.send_welcome_email(user_data.email, user_data.username, user_data.language)
+            logger.info(f"欢迎邮件发送成功: {user_data.email}")
         except Exception as e:
-            logger.warning(f"发送欢迎邮件失败: {e}")
-            # 不影响注册流程，只记录警告
+            logger.error(f"发送欢迎邮件失败: {e}")
+            # 不影响注册流程
         
         return {"message": "注册成功，欢迎邮件已发送"}
     
@@ -438,10 +441,11 @@ async def register(user_data: UserCreate):
 async def forgot_password(reset_data: PasswordReset):
     """忘记密码 - 发送验证码"""
     try:
-        # 发送密码重置验证码
+        # 发送密码重置验证码（无论用户是否存在都发送，为了安全）
         success = verification_manager.send_verification_code(
             reset_data.email, 
-            'password_reset'
+            'password_reset',
+            reset_data.language
         )
         
         if success:
@@ -817,7 +821,8 @@ async def send_verification_code(request: VerificationCodeRequest):
         # 发送验证码
         success = verification_manager.send_verification_code(
             request.email, 
-            request.code_type
+            request.code_type,
+            request.language
         )
         
         if success:
@@ -829,6 +834,8 @@ async def send_verification_code(request: VerificationCodeRequest):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="发送验证码失败，请稍后重试"
             )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"发送验证码异常: {str(e)}")
         raise HTTPException(

@@ -21,7 +21,7 @@
         
         <el-form-item>
           <el-button type="primary" class="submit-btn" native-type="submit" :loading="loading">
-            {{ $t('auth.sendResetLink') }}
+            {{ $t('auth.sendVerificationCode') }}
           </el-button>
         </el-form-item>
       </el-form>
@@ -79,10 +79,13 @@ export default {
             await api.forgotPassword(data);
             
             loading.value = false;
-            ElMessage.success('密码重置链接已发送到您的邮箱');
+            ElMessage.success('验证码已发送到您的邮箱，请查收');
             
-            // 成功后跳转到登录页
-            router.push({ path: '/login' });
+            // 成功后跳转到密码重置页面，并传递邮箱参数
+            router.push({ 
+              path: '/reset-password',
+              query: { email: formData.email }
+            });
           } catch (error) {
             loading.value = false;
             ElMessage.error('发送失败：' + (error.message || '未知错误'));

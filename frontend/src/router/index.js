@@ -10,6 +10,7 @@ import NotFound from '../views/NotFound.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 import ForgotPassword from '../views/ForgotPassword.vue'
+import ResetPassword from '../views/ResetPassword.vue'
 import UserProfile from '../views/UserProfile.vue'
 import UserSettings from '../views/UserSettings.vue'
 import SystemSettings from '../views/SystemSettings.vue'
@@ -76,6 +77,12 @@ const routes = [
     name: 'ForgotPassword',
     component: ForgotPassword,
     meta: { titleKey: 'auth.forgotPassword' }
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: ResetPassword,
+    meta: { titleKey: 'auth.resetPassword' }
   },
   {
     path: '/user/profile',
