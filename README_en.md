@@ -35,6 +35,8 @@ The backend uses FastAPI to build API services, the crawler module combines Dris
 
 The frontend is built with Vue3 and Element Plus for the user interface, implementing data visualization through ECharts. The system also features user authentication, IP proxy management, and CAPTCHA processing to effectively counter Lianjia's anti-crawling mechanisms, ensuring stable and reliable data collection.
 
+**🚀 Ready to Use**: The project comes pre-configured with all environment settings. Simply clone the code and use `docker-compose up -d` to start the system with one command, no complex configuration required.
+
 ## Key Features
 
 ### Data Collection Features
@@ -158,11 +160,16 @@ uv pip install -r requirements.txt
 5. Configure database
 
 ```bash
-# Create PostgreSQL database
-createdb -U postgres rental_analysis
+# Create PostgreSQL database (password: leapyaleapya123)
+createdb -h localhost -p 5432 -U postgres rental_analysis
 # Initialize database schema
 psql -h localhost -p 5432 -U postgres -d rental_analysis -f init.sql
 ```
+
+> **💡 Configuration Note**
+> 
+> The project includes a pre-configured `.env` file with default database password `leapyaleapya123`.
+> To change the password, edit the `DB_PASSWORD` field in the `.env` file.
 
 ### Frontend Installation
 
@@ -210,9 +217,9 @@ npm run serve
 > - Username: `admin`
 > - Password: `admin123`
 
-## Docker Deployment Guide (Optional)
+## Docker Deployment Guide (Recommended)
 
-This project provides Docker Compose configuration for one-click deployment of the entire system on Linux systems.
+This project provides ready-to-use Docker Compose configuration with pre-configured `.env` file, supporting one-click deployment of the entire system on Linux systems.
 
 ### Prerequisites
 
@@ -234,7 +241,7 @@ This project provides Docker Compose configuration for one-click deployment of t
    cd Awesome-lianjia-data-analysis-system
    ```
 
-2. Start services
+2. Start services directly (no additional configuration required)
    ```bash
    # Build and start all services
    docker-compose up -d
@@ -244,7 +251,7 @@ This project provides Docker Compose configuration for one-click deployment of t
    ```
 
 3. Access the system
-   - Frontend Interface: http://your-server-ip
+   - Frontend Interface: http://your-server-ip:8080
    - API Service: http://localhost:8000
 
 > **⚠️ Initial Login Credentials**
@@ -252,6 +259,16 @@ This project provides Docker Compose configuration for one-click deployment of t
 > Default login credentials for first deployment:
 > - Username: `admin`
 > - Password: `admin123`
+
+> **💡 Ready-to-Use Configuration**
+> 
+> The project comes with a pre-configured `.env` file containing development environment settings:
+> - Database Password: `leapyaleapya123`
+> - JWT Secret: Development-specific secret key
+> - Environment Mode: `development`
+> - Debug Mode: Enabled
+> 
+> For production environments, please refer to the `.env.example` file to configure secure keys and passwords.
 
 ### Service Management
 

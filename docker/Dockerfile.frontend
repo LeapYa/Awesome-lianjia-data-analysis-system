@@ -19,6 +19,9 @@ RUN npm run build
 # 部署阶段 - 使用Nginx托管前端应用
 FROM nginx:stable-alpine
 
+# 安装envsubst工具
+RUN apk update && apk add --no-cache gettext
+
 # 删除默认的nginx静态文件
 RUN rm -rf /usr/share/nginx/html/*
 

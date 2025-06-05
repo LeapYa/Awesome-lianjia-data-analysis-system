@@ -23,12 +23,12 @@ PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c "SELECT 1 FR
 }
 
 # 确保目录权限正确
-echo "Setting directory permissions..."
-chmod -R 777 /app/logs
-chmod -R 777 /app/screenshots
-chmod -R 777 /app/verification_sessions
-chmod -R 777 /app/verification_cookies
-chmod -R 777 /app/captcha_data
+echo "设置目录权限..."
+chmod -R 755 /app/logs
+chmod -R 755 /app/screenshots
+chmod -R 755 /app/verification_sessions
+chmod -R 755 /app/verification_cookies
+chmod -R 755 /app/captcha_data
 
 echo "Backend is ready!"
 

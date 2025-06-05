@@ -155,11 +155,16 @@ uv pip install -r requirements.txt
 5. 配置数据库
 
 ```bash
-# 创建PostgreSQL数据库
-createdb  -U postgres rental_analysis
+# 创建PostgreSQL数据库（密码为 leapyaleapya123）
+createdb -h localhost -p 5432 -U postgres rental_analysis
 # 初始化数据库表结构
 psql -h localhost -p 5432 -U postgres -d rental_analysis -f init.sql
 ```
+
+> **💡 配置说明**
+> 
+> 项目已包含预配置的`.env`文件，默认数据库密码为`leapyaleapya123`。
+> 如需修改，请编辑`.env`文件中的`DB_PASSWORD`字段。
 
 ### 前端安装
 
@@ -207,9 +212,9 @@ npm run serve
 > - 用户名：`admin`
 > - 密码：`admin123`
 
-## Docker部署指南(可选)
+## Docker部署指南(推荐)
 
-本项目提供了Docker Compose配置，支持在Linux系统上一键部署整个系统。
+本项目提供了开箱即用的Docker Compose配置，已预配置好`.env`文件，支持在Linux系统上一键部署整个系统。
 
 ### 前置条件
 
@@ -231,7 +236,7 @@ npm run serve
    cd Awesome-lianjia-data-analysis-system
    ```
 
-2. 启动服务
+2. 直接启动服务（无需额外配置）
    ```bash
    # 构建并启动所有服务
    docker-compose up -d
@@ -249,6 +254,14 @@ npm run serve
 > 首次部署时的登录凭据：
 > - 用户名：`admin`
 > - 密码：`admin123`
+
+> **💡 开箱即用配置**
+> 
+> 项目已预配置好`.env`文件，包含以下开发环境设置：
+> - 数据库密码：`leapyaleapya123`
+> - JWT密钥：开发环境专用密钥
+> - 环境模式：`development`
+> - 调试模式：已启用
 
 ### 服务管理
 

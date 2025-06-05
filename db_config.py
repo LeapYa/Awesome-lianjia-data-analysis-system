@@ -25,11 +25,11 @@ logger = logging.getLogger("db_config")
 
 # 数据库连接参数
 DB_PARAMS = {
-    "user": "postgres",
-    "password": "123456",
-    "host": "localhost",
-    "port": "5432",
-    "database": "rental_analysis",
+    "user": os.getenv("DB_USER", "postgres"),
+    "password": os.getenv("DB_PASSWORD", "123456"),
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": os.getenv("DB_PORT", "5432"),
+    "database": os.getenv("DB_NAME", "rental_analysis"),
     "client_encoding": "UTF8"
 }
 

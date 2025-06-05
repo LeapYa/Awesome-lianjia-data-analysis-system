@@ -22,6 +22,9 @@ import bcrypt
 import db_config
 import db_utils
 
+# 导入邮件和验证码工具
+from email_utils import email_sender, verification_manager
+
 # 确保logs目录存在
 logs_dir = "logs"
 if not os.path.exists(logs_dir):
@@ -98,7 +101,8 @@ class PasswordReset(BaseModel):
     email: EmailStr
 
 class PasswordResetConfirm(BaseModel):
-    token: str
+    email: EmailStr
+    code: str
     password: str
 
 class UserProfile(BaseModel):
@@ -121,6 +125,15 @@ class UserProfileUpdate(BaseModel):
 
 class AvatarUpdate(BaseModel):
     avatar_data: str  # Base64编码的图像数据
+
+class VerificationCodeRequest(BaseModel):
+    email: EmailStr
+    code_type: str = "email_verification"  # email_verification, password_reset
+
+class VerificationCodeVerify(BaseModel):
+    email: EmailStr
+    code: str
+    code_type: str = "email_verification"
 
 # 计算邮箱哈希
 @with_db_connection
@@ -396,7 +409,17 @@ async def register(user_data: UserCreate):
         conn.commit()
         
         logger.info(f"新用户注册成功: {user_data.username} (ID: {user_id})")
-        return {"message": "注册成功"}
+        
+        # 发送欢迎邮件
+        try:
+            from email_utils import email_sender
+            email_sender.send_welcome_email(user_data.email, user_data.username)
+            logger.info(f"欢迎邮件已发送给用户: {user_data.email}")
+        except Exception as e:
+            logger.warning(f"发送欢迎邮件失败: {e}")
+            # 不影响注册流程，只记录警告
+        
+        return {"message": "注册成功，欢迎邮件已发送"}
     
     except HTTPException:
         conn.rollback()
@@ -413,87 +436,65 @@ async def register(user_data: UserCreate):
 
 @router.post("/forgot-password", response_model=Dict[str, str])
 async def forgot_password(reset_data: PasswordReset):
-    """忘记密码"""
+    """忘记密码 - 发送验证码"""
+    try:
+        # 发送密码重置验证码
+        success = verification_manager.send_verification_code(
+            reset_data.email, 
+            'password_reset'
+        )
+        
+        if success:
+            logger.info(f"密码重置验证码已发送到: {reset_data.email}")
+            return {"message": "密码重置验证码已发送，请查收邮件"}
+        else:
+            logger.error(f"发送密码重置验证码失败: {reset_data.email}")
+            # 为了安全，即使失败也返回成功消息
+            return {"message": "如果该邮箱已注册，密码重置验证码已发送"}
+    except Exception as e:
+        logger.error(f"忘记密码处理失败: {str(e)}")
+        # 为了安全，即使出错也返回成功消息
+        return {"message": "如果该邮箱已注册，密码重置验证码已发送"}
+
+@router.post("/reset-password", response_model=Dict[str, str])
+async def reset_password(reset_data: PasswordResetConfirm):
+    """重置密码 - 使用验证码"""
     conn = db_config.get_connection(auth_pool)
     try:
-        # 使用邮箱哈希查找用户
+        # 先验证验证码
+        is_valid = verification_manager.verify_code(
+            reset_data.email,
+            reset_data.code,
+            'password_reset'
+        )
+        
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="验证码错误或已过期"
+            )
+        
+        # 验证码正确，检查用户是否存在
         email_hash = hash_email(reset_data.email)
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM users WHERE email_hash = %s", (email_hash,))
         user = cursor.fetchone()
         
         if not user:
-            # 为了安全，即使用户不存在也返回成功消息
-            return {"message": "密码重置链接已发送到您的邮箱"}
-        
-        # 生成密码重置令牌
-        token = generate_token()
-        expires_at = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-        
-        # 删除任何现有的重置令牌
-        cursor.execute("DELETE FROM password_resets WHERE email_hash = %s", (email_hash,))
-        
-        # 插入新令牌
-        cursor.execute(
-            "INSERT INTO password_resets (email_hash, token, expires_at) VALUES (%s, %s, %s)",
-            (email_hash, token, expires_at)
-        )
-        
-        conn.commit()
-        
-        # 在实际应用中，这里应该发送电子邮件
-        logger.info(f"为邮箱哈希 {email_hash} 生成了密码重置令牌: {token}")
-        
-        return {"message": "密码重置链接已发送到您的邮箱"}
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"忘记密码处理失败: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="处理请求时出错"
-        )
-    finally:
-        db_config.release_connection(auth_pool, conn)
-
-@router.post("/reset-password", response_model=Dict[str, str])
-async def reset_password(reset_data: PasswordResetConfirm):
-    """重置密码"""
-    conn = db_config.get_connection(auth_pool)
-    try:
-        # 验证令牌
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT email_hash, expires_at FROM password_resets WHERE token = %s",
-            (reset_data.token,)
-        )
-        reset = cursor.fetchone()
-        
-        if not reset:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="无效的重置令牌"
-            )
-        
-        # 检查令牌是否过期
-        if reset["expires_at"] < datetime.datetime.utcnow():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="重置令牌已过期"
+                detail="用户不存在"
             )
         
         # 更新用户密码
         password_hash = get_password_hash(reset_data.password)
-        
         cursor.execute(
             "UPDATE users SET password_hash = %s WHERE email_hash = %s",
-            (password_hash, reset["email_hash"])
+            (password_hash, email_hash)
         )
         
-        # 删除使用过的令牌
-        cursor.execute("DELETE FROM password_resets WHERE token = %s", (reset_data.token,))
-        
         conn.commit()
-        logger.info(f"用户 (邮箱哈希:{reset['email_hash']}) 成功重置了密码")
+        logger.info(f"用户 (邮箱哈希:{email_hash}) 成功重置了密码")
         
         return {"message": "密码重置成功"}
     except HTTPException:
@@ -807,4 +808,60 @@ async def update_avatar(
         logger.error(f"更新头像失败: {str(e)}")
         raise HTTPException(status_code=500, detail="更新头像失败")
     finally:
-        db_config.release_connection(auth_pool, conn) 
+        db_config.release_connection(auth_pool, conn)
+
+@router.post("/send-verification-code", response_model=Dict[str, str])
+async def send_verification_code(request: VerificationCodeRequest):
+    """发送邮箱验证码"""
+    try:
+        # 发送验证码
+        success = verification_manager.send_verification_code(
+            request.email, 
+            request.code_type
+        )
+        
+        if success:
+            logger.info(f"验证码已发送到: {request.email}")
+            return {"message": "验证码已发送，请查收邮件"}
+        else:
+            logger.error(f"发送验证码失败: {request.email}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="发送验证码失败，请稍后重试"
+            )
+    except Exception as e:
+        logger.error(f"发送验证码异常: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="发送验证码失败"
+        )
+
+@router.post("/verify-code", response_model=Dict[str, Any])
+async def verify_verification_code(request: VerificationCodeVerify):
+    """验证验证码"""
+    try:
+        # 验证验证码
+        is_valid = verification_manager.verify_code(
+            request.email,
+            request.code,
+            request.code_type
+        )
+        
+        if is_valid:
+            logger.info(f"验证码验证成功: {request.email}")
+            return {
+                "valid": True,
+                "message": "验证码验证成功"
+            }
+        else:
+            logger.warning(f"验证码验证失败: {request.email}")
+            return {
+                "valid": False,
+                "message": "验证码错误或已过期"
+            }
+    except Exception as e:
+        logger.error(f"验证验证码异常: {str(e)}")
+        return {
+            "valid": False,
+            "message": "验证失败"
+        } 

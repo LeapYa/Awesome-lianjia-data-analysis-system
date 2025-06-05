@@ -5,10 +5,8 @@ services:
     container_name: lianjia-postgres
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-123456}
       POSTGRES_DB: rental_analysis
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -33,7 +31,6 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - .:/app
       - ./logs:/app/logs
       - ./screenshots:/app/screenshots
       - ./verification_sessions:/app/verification_sessions
@@ -43,10 +40,18 @@ services:
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=postgres
-      - DB_PASSWORD=123456
+      - DB_PASSWORD=${DB_PASSWORD:-123456}
       - DB_NAME=rental_analysis
       - PYTHONUNBUFFERED=1
-      - CHROME_HEADLESS=true  # 设置为true启用headless模式，不设置或false则使用界面模式(默认)
+      - CHROME_HEADLESS=true
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-secure_jwt_secret_key_2024}
+      - EMAIL_ENCRYPTION_KEY=${EMAIL_ENCRYPTION_KEY:-dev_email_encryption_key_change_in_prod}
+      - SMTP_SERVER=${SMTP_SERVER:-smtp.163.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_EMAIL=${SMTP_EMAIL}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_USE_TLS=${SMTP_USE_TLS:-true}
+      - NGINX_SERVER_NAME=${NGINX_SERVER_NAME:-localhost}
     restart: unless-stopped
     networks:
       - app-network
@@ -61,6 +66,8 @@ services:
       - "80:80"
     depends_on:
       - backend
+    environment:
+      - NGINX_SERVER_NAME=${NGINX_SERVER_NAME:-localhost}
     restart: unless-stopped
     networks:
       - app-network

@@ -38,6 +38,7 @@ import data_processor
 import auth_secure as auth  # 使用加密版的认证模块
 import ip_manager  # 导入IP管理模块
 import db_config    # 导入数据库配置模块
+import security_utils  # 导入安全工具模块
 
 # 记录应用启动时间
 start_time_seconds = time.time()
@@ -98,9 +99,14 @@ app = FastAPI(
 # 配置FastAPI处理JSON响应时使用自定义编码器
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 允许所有来源，生产环境中应该设置为特定的域名
+    allow_origins=[
+        "http://localhost:8080",  # 开发环境前端
+        "http://localhost:80",    # 生产环境前端
+        "http://127.0.0.1:8080",  # 本地开发
+        "http://127.0.0.1:80",    # 本地生产
+    ],  # 只允许特定域名，提高安全性
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -131,13 +137,13 @@ async def custom_json_serialization(request: Request, call_next):
 # 注册认证路由
 app.include_router(auth.router)
 
-# 数据库连接参数 - 保留以兼容旧代码
+# 数据库连接参数
 DB_CONFIG = {
-    "user": "postgres",
-    "password": "123456",
-    "host": "localhost",
-    "port": "5432",
-    "database": "rental_analysis"
+    "user": os.getenv("DB_USER", "postgres"),
+    "password": os.getenv("DB_PASSWORD", "123456"),
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": os.getenv("DB_PORT", "5432"),
+    "database": os.getenv("DB_NAME", "rental_analysis")
 }
 
 # 创建API专用的数据库连接池
@@ -389,7 +395,7 @@ async def get_cities():
     return spider.get_supported_cities()
 
 @app.post("/tasks/crawl", response_model=CrawlTaskStatus)
-async def create_crawl_task(task_info: CrawlTaskCreate, background_tasks: BackgroundTasks):
+async def create_crawl_task(task_info: CrawlTaskCreate, background_tasks: BackgroundTasks, auth_user: dict = Depends(auth.get_current_user)):
     """创建并执行新的爬虫任务"""
     cities = spider.get_supported_cities()
     
@@ -416,7 +422,7 @@ async def create_crawl_task(task_info: CrawlTaskCreate, background_tasks: Backgr
     #     )
     #     conn.commit()
     
-    logger.info(f"创建爬虫任务成功，ID: {task_id}，城市: {task_info.city}，预期房源数: {expected_houses}，计划页数: {task_info.max_pages}")
+    logger.info(f"用户 {auth_user.get('username', 'unknown')} 创建爬虫任务成功，ID: {task_id}，城市: {task_info.city}，预期房源数: {expected_houses}，计划页数: {task_info.max_pages}")
     
     # 在后台执行爬虫任务，确保传递已创建的task_id
     background_tasks.add_task(spider.crawl_city_with_selenium, 
@@ -437,7 +443,7 @@ async def create_crawl_task(task_info: CrawlTaskCreate, background_tasks: Backgr
     return task
 
 @app.get("/tasks", response_model=List[CrawlTaskStatus])
-async def get_tasks(limit: int = 10, offset: int = 0):
+async def get_tasks(limit: int = 10, offset: int = 0, auth_user: dict = Depends(auth.get_current_user)):
     """获取爬虫任务列表"""
     try:
         with DBConnectionManager() as conn:
@@ -549,7 +555,7 @@ async def get_tasks(limit: int = 10, offset: int = 0):
         return []
 
 @app.get("/tasks/{task_id}", response_model=CrawlTaskStatus)
-async def get_task(task_id: int):
+async def get_task(task_id: int, auth_user: dict = Depends(auth.get_current_user)):
     """获取爬虫任务详情"""
     try:
         with DBConnectionManager() as conn:
@@ -605,6 +611,30 @@ async def get_houses(
 ):
     """获取房源数据列表"""
     try:
+        # 输入验证
+        validated_city = None
+        validated_district = None
+        validated_min_price, validated_max_price = None, None
+        validated_min_size, validated_max_size = None, None
+        validated_room_count = None
+        
+        if city:
+            validated_city = security_utils.validate_city_name(city)
+        
+        if district:
+            validated_district = security_utils.validate_district_name(district)
+        
+        if min_price is not None or max_price is not None:
+            validated_min_price, validated_max_price = security_utils.validate_price_range(min_price, max_price)
+        
+        if min_size is not None or max_size is not None:
+            validated_min_size, validated_max_size = security_utils.validate_size_range(min_size, max_size)
+        
+        if room_count is not None:
+            validated_room_count = security_utils.validate_room_count(room_count)
+        
+        validated_limit, validated_offset = security_utils.validate_pagination(limit, offset)
+        
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -612,46 +642,49 @@ async def get_houses(
         conditions = []
         params = []
         
-        if city:
+        if validated_city:
             query += " JOIN crawl_task t ON h.task_id = t.id"
             conditions.append("t.city = %s")
-            params.append(city)
+            params.append(validated_city)
         
-        if district:
+        if validated_district:
             conditions.append("h.location_qu = %s")
-            params.append(district)
+            params.append(validated_district)
         
-        if min_price is not None:
+        if validated_min_price is not None:
             conditions.append("h.price >= %s")
-            params.append(min_price)
+            params.append(validated_min_price)
         
-        if max_price is not None:
+        if validated_max_price is not None:
             conditions.append("h.price <= %s")
-            params.append(max_price)
+            params.append(validated_max_price)
         
-        if min_size is not None:
+        if validated_min_size is not None:
             conditions.append("h.size >= %s")
-            params.append(min_size)
+            params.append(validated_min_size)
         
-        if max_size is not None:
+        if validated_max_size is not None:
             conditions.append("h.size <= %s")
-            params.append(max_size)
+            params.append(validated_max_size)
         
-        if room_count is not None:
+        if validated_room_count is not None:
             conditions.append("h.room_count = %s")
-            params.append(room_count)
+            params.append(validated_room_count)
         
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
         
         query += " ORDER BY h.id DESC LIMIT %s OFFSET %s"
-        params.extend([limit, offset])
+        params.extend([validated_limit, validated_offset])
         
         cursor.execute(query, params)
         houses = cursor.fetchall()
         conn.close()
         
         return houses
+    except ValueError as ve:
+        logger.warning(f"输入验证失败: {str(ve)}")
+        raise HTTPException(status_code=400, detail=f"输入参数错误: {str(ve)}")
     except Exception as e:
         logger.error(f"获取房源列表失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"获取房源列表失败: {str(e)}")
@@ -694,6 +727,28 @@ async def get_houses_count(
 ):
     """获取符合条件的房源总数"""
     try:
+        # 输入验证
+        validated_city = None
+        validated_district = None
+        validated_min_price, validated_max_price = None, None
+        validated_min_size, validated_max_size = None, None
+        validated_room_count = None
+        
+        if city:
+            validated_city = security_utils.validate_city_name(city)
+        
+        if district:
+            validated_district = security_utils.validate_district_name(district)
+        
+        if min_price is not None or max_price is not None:
+            validated_min_price, validated_max_price = security_utils.validate_price_range(min_price, max_price)
+        
+        if min_size is not None or max_size is not None:
+            validated_min_size, validated_max_size = security_utils.validate_size_range(min_size, max_size)
+        
+        if room_count is not None:
+            validated_room_count = security_utils.validate_room_count(room_count)
+        
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -701,34 +756,34 @@ async def get_houses_count(
         conditions = []
         params = []
         
-        if city:
+        if validated_city:
             query += " JOIN crawl_task t ON h.task_id = t.id"
             conditions.append("t.city = %s")
-            params.append(city)
+            params.append(validated_city)
         
-        if district:
+        if validated_district:
             conditions.append("h.location_qu = %s")
-            params.append(district)
+            params.append(validated_district)
         
-        if min_price is not None:
+        if validated_min_price is not None:
             conditions.append("h.price >= %s")
-            params.append(min_price)
+            params.append(validated_min_price)
         
-        if max_price is not None:
+        if validated_max_price is not None:
             conditions.append("h.price <= %s")
-            params.append(max_price)
+            params.append(validated_max_price)
         
-        if min_size is not None:
+        if validated_min_size is not None:
             conditions.append("h.size >= %s")
-            params.append(min_size)
+            params.append(validated_min_size)
         
-        if max_size is not None:
+        if validated_max_size is not None:
             conditions.append("h.size <= %s")
-            params.append(max_size)
+            params.append(validated_max_size)
         
-        if room_count is not None:
+        if validated_room_count is not None:
             conditions.append("h.room_count = %s")
-            params.append(room_count)
+            params.append(validated_room_count)
         
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
@@ -738,6 +793,9 @@ async def get_houses_count(
         conn.close()
         
         return {"count": count}
+    except ValueError as ve:
+        logger.warning(f"输入验证失败: {str(ve)}")
+        raise HTTPException(status_code=400, detail=f"输入参数错误: {str(ve)}")
     except Exception as e:
         logger.error(f"获取房源数量失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"获取房源数量失败: {str(e)}")
@@ -763,7 +821,7 @@ async def get_house(house_id: str):
         raise HTTPException(status_code=500, detail=f"获取房源详情失败: {str(e)}")
 
 @app.post("/analysis/run", response_model=Dict[str, str])
-async def run_analysis(analysis_req: AnalysisRequest, background_tasks: BackgroundTasks):
+async def run_analysis(analysis_req: AnalysisRequest, background_tasks: BackgroundTasks, auth_user: dict = Depends(auth.get_current_user)):
     """运行数据分析任务"""
     try:
         # 使用全局变量跟踪正在运行的分析任务数量
@@ -778,7 +836,7 @@ async def run_analysis(analysis_req: AnalysisRequest, background_tasks: Backgrou
         
         # 增加运行任务计数
         RUNNING_ANALYSIS_TASKS += 1
-        logger.info(f"当前运行的分析任务数量: {RUNNING_ANALYSIS_TASKS}")
+        logger.info(f"用户 {auth_user.get('username', 'unknown')} 启动分析任务，当前运行的分析任务数量: {RUNNING_ANALYSIS_TASKS}")
         
         # 定义一个包装函数，确保任务完成后减少计数
         async def run_analysis_with_cleanup(city, task_id):
@@ -820,7 +878,8 @@ async def get_analysis_results(
     analysis_type: Optional[str] = None,
     city: Optional[str] = None,
     limit: int = 10,
-    offset: int = 0
+    offset: int = 0,
+    auth_user: dict = Depends(auth.get_current_user)
 ):
     """获取分析结果列表"""
     try:
@@ -864,7 +923,7 @@ async def get_analysis_results(
         raise HTTPException(status_code=500, detail=f"获取分析结果失败: {str(e)}")
 
 @app.get("/analysis/results/{result_id}", response_model=AnalysisResult)
-async def get_analysis_result(result_id: int):
+async def get_analysis_result(result_id: int, auth_user: dict = Depends(auth.get_current_user)):
     """获取分析结果详情"""
     try:
         with DBConnectionManager() as conn:
@@ -934,7 +993,7 @@ async def get_districts(city: Optional[str] = None):
         raise HTTPException(status_code=500, detail=f"获取区域列表失败: {str(e)}")
 
 @app.get("/statistics/summary")
-async def get_summary_statistics(city: Optional[str] = None):
+async def get_summary_statistics(city: Optional[str] = None, auth_user: dict = Depends(auth.get_current_user)):
     """获取租房市场概览统计"""
     try:
         with DBConnectionManager() as conn:
@@ -1092,7 +1151,7 @@ async def startup_event():
 
 # 在原有的爬虫任务接口中使用selenium爬虫
 @app.post("/tasks/selenium_crawl", response_model=CrawlTaskStatus)
-async def create_selenium_crawl_task(task_info: CrawlTaskCreate, background_tasks: BackgroundTasks):
+async def create_selenium_crawl_task(task_info: CrawlTaskCreate, background_tasks: BackgroundTasks, auth_user: dict = Depends(auth.get_current_user)):
     """创建并执行新的Selenium爬虫任务"""
     cities = spider.get_supported_cities()
     
@@ -1119,7 +1178,7 @@ async def create_selenium_crawl_task(task_info: CrawlTaskCreate, background_task
     #     )
     #     conn.commit()
     
-    # logger.info(f"创建Selenium爬虫任务成功，ID: {task_id}，城市: {task_info.city}，预期房源数: {expected_houses}，计划页数: {task_info.max_pages}")
+    logger.info(f"用户 {auth_user.get('username', 'unknown')} 创建Selenium爬虫任务成功，ID: {task_id}，城市: {task_info.city}，预期房源数: {expected_houses}，计划页数: {task_info.max_pages}")
     
     # 在后台执行Selenium爬虫任务，确保传递已创建的task_id
     background_tasks.add_task(spider.crawl_city_with_selenium, 
@@ -2117,7 +2176,7 @@ async def save_ip_settings(settings: IpSettings, auth_user: dict = Depends(auth.
         raise HTTPException(status_code=500, detail=f"保存IP设置失败: {str(e)}")
 
 @app.get("/dashboard")
-async def get_dashboard_stats():
+async def get_dashboard_stats(auth_user: dict = Depends(auth.get_current_user)):
     """获取仪表盘统计数据"""
     try:
         with DBConnectionManager() as conn:
@@ -2318,7 +2377,8 @@ async def export_houses(
     min_size: Optional[float] = None,
     max_size: Optional[float] = None,
     room_count: Optional[int] = None,
-    task_id: Optional[int] = None
+    task_id: Optional[int] = None,
+    auth_user: dict = Depends(auth.get_current_user)
 ):
     """导出房源数据为CSV文件"""
     import io

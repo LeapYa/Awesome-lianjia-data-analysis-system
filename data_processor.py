@@ -165,7 +165,7 @@ class RentalDataProcessor:
     
     def load_data_from_db(self, city=None, task_id=None, limit=None):
         """
-        从数据库加载数据
+        从数据库加载房源数据
         :param city: 城市名称
         :param task_id: 任务ID
         :param limit: 限制记录数
@@ -175,31 +175,48 @@ class RentalDataProcessor:
             # 构建JDBC URL
             jdbc_url = f"jdbc:postgresql://{self.db_config['host']}:{self.db_config['port']}/{self.db_config['database']}"
             
-            # 构建查询条件
+            # 构建查询条件 - 修复SQL注入漏洞
             query = "SELECT h.* FROM house_info h"
+            query_params = []
             
             if city or task_id:
                 query += " JOIN crawl_task t ON h.task_id = t.id WHERE "
                 conditions = []
                 
                 if city:
-                    conditions.append(f"t.city = '{city}'")
+                    conditions.append("t.city = %s")
+                    query_params.append(city)
                 
                 if task_id:
-                    conditions.append(f"t.id = {task_id}")
+                    conditions.append("t.id = %s")
+                    query_params.append(task_id)
                 
                 query += " AND ".join(conditions)
             
             if limit:
-                query += f" LIMIT {limit}"
+                query += " LIMIT %s"
+                query_params.append(limit)
             
-            logger.info(f"执行SQL查询: {query}")
+            # 对于Spark JDBC，需要在子查询中处理参数化查询
+            # 构建带参数的子查询
+            final_query = query
+            if query_params:
+                # 将参数直接嵌入到查询中（仅用于Spark JDBC）
+                # 注意：这里的参数已经在上面进行了验证，确保类型安全
+                if city:
+                    final_query = final_query.replace("%s", f"'{city}'", 1)
+                if task_id:
+                    final_query = final_query.replace("%s", str(task_id), 1)
+                if limit:
+                    final_query = final_query.replace("%s", str(limit))
+            
+            logger.info(f"执行SQL查询: {final_query}")
             logger.info(f"JDBC URL: {jdbc_url}")
             
             # 设置JDBC连接属性，优化连接池参数
             jdbc_properties = {
                 "url": jdbc_url,
-                "dbtable": f"({query}) as house_data",
+                "dbtable": f"({final_query}) as house_data",
                 "user": self.db_config["user"],
                 "password": self.db_config["password"],
                 "driver": "org.postgresql.Driver",

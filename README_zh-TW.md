@@ -31,6 +31,8 @@
 
 鏈家租房數據採集與分析系統是一個基於Python+Vue3構建的租房數據處理平台。主要解決鏈家網站租房數據的自動化採集、處理鏈家反爬、數據存儲、分析和可視化展示問題。後端使用FastAPI構建API服務，爬蟲模組結合DrissionPage實現瀏覽器自動化控制，驗證碼處理模組使用OpenCV識別和處理滑塊驗證碼，數據處理採用PySpark進行批量分析，使用pgsql作為主要資料庫存儲爬取的房源數據和分析結果。前端基於Vue3和Element Plus構建用戶界面，通過ECharts實現數據可視化。系統還實現了用戶認證、IP代理管理和驗證碼處理等功能，有效應對鏈家網站的反爬機制，保證數據採集的穩定性和可靠性。
 
+**🚀 開箱即用**: 項目已預配置好所有環境設置，克隆代碼後直接使用`docker-compose up -d`即可一鍵啟動系統，無需複雜配置。
+
 ## 主要功能
 
 ### 數據採集功能
@@ -155,11 +157,16 @@ uv pip install -r requirements.txt
 5. 配置資料庫
 
 ```bash
-# 創建PostgreSQL資料庫
-createdb  -U postgres rental_analysis
+# 創建PostgreSQL資料庫（密碼為 leapyaleapya123）
+createdb -h localhost -p 5432 -U postgres rental_analysis
 # 初始化資料庫表結構
 psql -h localhost -p 5432 -U postgres -d rental_analysis -f init.sql
 ```
+
+> **💡 配置說明**
+> 
+> 項目已包含預配置的`.env`文件，預設資料庫密碼為`leapyaleapya123`。
+> 如需修改，請編輯`.env`文件中的`DB_PASSWORD`字段。
 
 ### 前端安裝
 
@@ -207,9 +214,9 @@ npm run serve
 > - 用戶名：`admin`
 > - 密碼：`admin123`
 
-## Docker部署指南(可選)
+## Docker部署指南(推薦)
 
-本項目提供了Docker Compose配置，支持在Linux系統上一鍵部署整個系統。
+本項目提供了開箱即用的Docker Compose配置，已預配置好`.env`文件，支持在Linux系統上一鍵部署整個系統。
 
 ### 前置條件
 
@@ -231,7 +238,7 @@ npm run serve
    cd Awesome-lianjia-data-analysis-system
    ```
 
-2. 啟動服務
+2. 直接啟動服務（無需額外配置）
    ```bash
    # 構建並啟動所有服務
    docker-compose up -d
@@ -241,7 +248,7 @@ npm run serve
    ```
 
 3. 訪問系統
-   - 前端界面: http://你的IP地址
+   - 前端界面: http://你的IP地址:8080
    - API服務: http://localhost:8000
 
 > **⚠️ 初始登錄信息**
@@ -249,6 +256,16 @@ npm run serve
 > 首次部署時的登錄憑據：
 > - 用戶名：`admin`
 > - 密碼：`admin123`
+
+> **💡 開箱即用配置**
+> 
+> 項目已預配置好`.env`文件，包含以下開發環境設置：
+> - 資料庫密碼：`leapyaleapya123`
+> - JWT密鑰：開發環境專用密鑰
+> - 環境模式：`development`
+> - 調試模式：已啟用
+> 
+> 對於生產環境部署，請參考`.env.example`文件自行配置安全的密鑰和密碼。
 
 ### 服務管理
 

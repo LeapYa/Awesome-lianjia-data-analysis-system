@@ -50,8 +50,13 @@ RUN CHROME_VERSION=$(google-chrome --version | grep -oP '(?<=Google Chrome )[0-9
     && echo "ChromeDriver安装完成，版本信息:" \
     && chromedriver --version
 
-# 复制requirements.txt并安装Python依赖
-COPY requirements.txt .
+# 复制整个项目目录到镜像中
+COPY . .
+
+RUN rm -rf docker
+
+RUN rm -rf frontend
+
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 设置环境变量
