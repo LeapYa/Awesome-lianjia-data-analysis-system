@@ -957,10 +957,10 @@ def setup_driver():
             # 根据环境变量配置headless模式
             co.headless(use_headless)
             # 添加Docker环境所需的配置
-            co.add_argument('--no-sandbox')
-            co.add_argument('--disable-dev-shm-usage')
-            co.add_argument('--disable-gpu')
-            co.add_argument('--remote-debugging-port=9222')
+            co.set_argument('--no-sandbox')
+            co.set_argument('--disable-dev-shm-usage')
+            co.set_argument('--disable-gpu')
+            co.set_argument('--remote-debugging-port=9222')
             co.set_proxy(proxy_config)
             page = ChromiumPage(co)
             mode_text = "headless" if use_headless else "界面"
@@ -971,10 +971,10 @@ def setup_driver():
             # 根据环境变量配置headless模式
             co.headless(use_headless)
             # 添加Docker环境所需的配置
-            co.add_argument('--no-sandbox')
-            co.add_argument('--disable-dev-shm-usage')
-            co.add_argument('--disable-gpu')
-            co.add_argument('--remote-debugging-port=9222')
+            co.set_argument('--no-sandbox')
+            co.set_argument('--disable-dev-shm-usage')
+            co.set_argument('--disable-gpu')
+            co.set_argument('--remote-debugging-port=9222')
             page = ChromiumPage(co)
             mode_text = "headless" if use_headless else "界面"
             logger.info(f"DrissionPage已配置{mode_text}模式")

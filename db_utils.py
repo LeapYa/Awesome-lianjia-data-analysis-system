@@ -51,45 +51,13 @@ def release_db_connection(conn):
     except Exception as e:
         logger.error(f"释放数据库连接失败: {str(e)}")
 
-def decrypt_email(encrypted_email: str) -> str:
-    """解密邮箱地址"""
-    conn = None
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cursor.execute(
-            "SELECT decrypt_email(%s, %s) as decrypted", 
-            (encrypted_email, EMAIL_ENCRYPTION_KEY)
-        )
-        result = cursor.fetchone()
-        return result["decrypted"]
-    except Exception as e:
-        logger.error(f"邮箱解密失败: {str(e)}")
-        raise
-    finally:
-        if conn:
-            release_db_connection(conn)
+def store_email(email: str) -> str:
+    """直接返回邮箱明文"""
+    return email
 
-def encrypt_email(email: str) -> str:
-    """加密邮箱地址"""
-    conn = None
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cursor.execute(
-            "SELECT encrypt_email(%s, %s) as encrypted", 
-            (email, EMAIL_ENCRYPTION_KEY)
-        )
-        result = cursor.fetchone()
-        return result["encrypted"]
-    except Exception as e:
-        logger.error(f"邮箱加密失败: {str(e)}")
-        raise
-    finally:
-        if conn:
-            release_db_connection(conn)
+def get_email(stored_email: str) -> str:
+    """直接返回存储的邮箱"""
+    return stored_email
 
 def with_db_connection(connection_pool):
     """

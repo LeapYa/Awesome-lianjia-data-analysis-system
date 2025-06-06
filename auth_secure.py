@@ -141,50 +141,20 @@ class VerificationCodeVerify(BaseModel):
     code: str
     code_type: str = "email_verification"
 
-# 计算邮箱哈希
-@with_db_connection
-def hash_email(conn, email: str) -> str:
-    cursor = conn.cursor(cursor_factory=RealDictCursor)
-    
-    try:
-        cursor.execute("SELECT hash_email(%s) as hash", (email,))
-        result = cursor.fetchone()
-        return result["hash"]
-    except Exception as e:
-        logger.error(f"计算邮箱哈希失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="内部服务器错误")
+# 计算邮箱哈希，用于查找
+def hash_email_for_lookup(email: str) -> str:
+    """使用SHA256对邮箱进行哈希，用于查找目的"""
+    import hashlib
+    return hashlib.sha256(email.lower().encode('utf-8')).hexdigest()
 
-# 加密邮箱
-@with_db_connection
-def encrypt_email(conn, email: str) -> str:
-    cursor = conn.cursor(cursor_factory=RealDictCursor)
-    
-    try:
-        cursor.execute(
-            "SELECT encrypt_email(%s, %s) as encrypted", 
-            (email, EMAIL_ENCRYPTION_KEY)
-        )
-        result = cursor.fetchone()
-        return result["encrypted"]
-    except Exception as e:
-        logger.error(f"邮箱加密失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="内部服务器错误")
+# 移除邮箱加密解密函数，直接使用明文
+def store_email(email: str) -> str:
+    """直接返回邮箱明文"""
+    return email
 
-# 解密邮箱
-@with_db_connection
-def decrypt_email(conn, encrypted_email: str) -> str:
-    cursor = conn.cursor(cursor_factory=RealDictCursor)
-    
-    try:
-        cursor.execute(
-            "SELECT decrypt_email(%s, %s) as decrypted", 
-            (encrypted_email, EMAIL_ENCRYPTION_KEY)
-        )
-        result = cursor.fetchone()
-        return result["decrypted"]
-    except Exception as e:
-        logger.error(f"邮箱解密失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="内部服务器错误")
+def get_email(stored_email: str) -> str:
+    """直接返回存储的邮箱"""
+    return stored_email
 
 # 验证用户
 @with_db_connection
@@ -220,13 +190,6 @@ def authenticate_user(conn, username: str, password: str) -> Optional[Dict[str, 
         )
         conn.commit()
         
-        # 添加解密邮箱的错误处理
-        try:
-            user["email"] = decrypt_email(user["email"])
-        except Exception as e:
-            logger.error(f"邮箱解密失败: {str(e)}")
-            # 保留原始值
-            logger.info("使用原始邮箱值")
         
         return user
     except Exception as e:
@@ -289,13 +252,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         
         if user is None:
             raise credentials_exception
-        
-        try:
-            user["email"] = decrypt_email(user["email"])
-        except:
-            # 如果解密失败，保留原始值
-            pass
-            
+    
         return user
     except Exception as e:
         logger.error(f"获取用户信息失败: {str(e)}")
@@ -380,7 +337,7 @@ async def register(user_data: UserCreate):
     """用户注册"""
     conn = db_config.get_connection(auth_pool)
     try:
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         # 检查用户名是否已存在
         cursor.execute("SELECT id FROM users WHERE username = %s", (user_data.username,))
@@ -391,7 +348,7 @@ async def register(user_data: UserCreate):
             )
         
         # 检查邮箱是否已存在（通过邮箱哈希）
-        email_hash = hash_email(user_data.email)
+        email_hash = hash_email_for_lookup(user_data.email)
         cursor.execute("SELECT id FROM users WHERE email_hash = %s", (email_hash,))
         if cursor.fetchone():
             raise HTTPException(
@@ -399,8 +356,6 @@ async def register(user_data: UserCreate):
                 detail="邮箱已被注册"
             )
         
-        # 加密邮箱并创建新用户
-        encrypted_email = encrypt_email(user_data.email)
         password_hash = get_password_hash(user_data.password)
         
         cursor.execute(
@@ -408,7 +363,7 @@ async def register(user_data: UserCreate):
             INSERT INTO users (username, email, email_hash, password_hash) 
             VALUES (%s, %s, %s, %s) RETURNING id
             """,
-            (user_data.username, encrypted_email, email_hash, password_hash)
+            (user_data.username, user_data.email, email_hash, password_hash)
         )
         
         user_id = cursor.fetchone()["id"]
@@ -484,8 +439,8 @@ async def reset_password(reset_data: PasswordResetConfirm):
             )
         
         # 验证码正确，检查用户是否存在
-        email_hash = hash_email(reset_data.email)
-        cursor = conn.cursor()
+        email_hash = hash_email_for_lookup(reset_data.email)
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         cursor.execute("SELECT id FROM users WHERE email_hash = %s", (email_hash,))
         user = cursor.fetchone()
         
@@ -578,12 +533,12 @@ async def update_user_profile(
         updates = []
         params = []
         
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         # 处理邮箱更新
         if "email" in profile_data and profile_data["email"] != current_user["email"]:
             # 验证新邮箱是否已被使用
-            email_hash = hash_email(profile_data["email"])
+            email_hash = hash_email_for_lookup(profile_data["email"])
             cursor.execute(
                 "SELECT id FROM users WHERE email_hash = %s AND id != %s",
                 (email_hash, user_id)
@@ -592,12 +547,9 @@ async def update_user_profile(
             if cursor.fetchone():
                 raise HTTPException(status_code=400, detail="该邮箱已被使用")
             
-            # 加密新邮箱
-            encrypted_email = encrypt_email(profile_data["email"])
-            
             # 添加到更新项
             updates.append("email = %s, email_hash = %s")
-            params.extend([encrypted_email, email_hash])
+            params.extend([profile_data["email"], email_hash])
             logger.info(f"用户 {current_user['username']} 更新了邮箱")
         
         # 处理密码更新
@@ -657,7 +609,7 @@ async def delete_account(
         user_id = current_user["id"]
         username = current_user["username"]
         
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         # 从用户设置表中删除数据
         cursor.execute("DELETE FROM user_settings WHERE user_id = %s", (user_id,))
@@ -693,7 +645,7 @@ async def get_user_settings(current_user: dict = Depends(get_current_user)):
     """获取用户设置"""
     conn = db_config.get_connection(auth_pool)
     try:
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         cursor.execute(
             "SELECT settings FROM user_settings WHERE user_id = %s",
             (current_user["id"],)
@@ -738,7 +690,7 @@ async def update_user_settings(
         # 将设置转换为JSON
         settings_json = settings.dict()
         
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         # 使用upsert操作保存设置
         cursor.execute("""
@@ -807,7 +759,7 @@ async def update_avatar(
         # 保存头像文件
         avatar_path = await save_avatar(avatar_data.avatar_data, current_user["username"])
         
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         # 更新数据库
         cursor.execute(

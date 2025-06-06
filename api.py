@@ -447,7 +447,7 @@ async def get_tasks(limit: int = 10, offset: int = 0, auth_user: dict = Depends(
     """获取爬虫任务列表"""
     try:
         with DBConnectionManager() as conn:
-            cursor = conn.cursor()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             # 设置更短的查询超时 - 必须在事务外执行
             cursor.execute("SET statement_timeout TO '5000'")  # 5秒超时
@@ -559,7 +559,7 @@ async def get_task(task_id: int, auth_user: dict = Depends(auth.get_current_user
     """获取爬虫任务详情"""
     try:
         with DBConnectionManager() as conn:
-            cursor = conn.cursor()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("SELECT * FROM crawl_task WHERE id = %s", (task_id,))
             task = cursor.fetchone()
             
@@ -636,7 +636,7 @@ async def get_houses(
         validated_limit, validated_offset = security_utils.validate_pagination(limit, offset)
         
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         query = "SELECT h.* FROM house_info h"
         conditions = []
@@ -750,7 +750,7 @@ async def get_houses_count(
             validated_room_count = security_utils.validate_room_count(room_count)
         
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         query = "SELECT COUNT(*) FROM house_info h"
         conditions = []
@@ -805,7 +805,7 @@ async def get_house(house_id: str):
     """获取房源详情"""
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         cursor.execute("SELECT * FROM house_info WHERE house_id = %s", (house_id,))
         house = cursor.fetchone()
         conn.close()
@@ -884,7 +884,7 @@ async def get_analysis_results(
     """获取分析结果列表"""
     try:
         with DBConnectionManager() as conn:
-            cursor = conn.cursor()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             query = "SELECT * FROM analysis_result"
             conditions = []
@@ -927,7 +927,7 @@ async def get_analysis_result(result_id: int, auth_user: dict = Depends(auth.get
     """获取分析结果详情"""
     try:
         with DBConnectionManager() as conn:
-            cursor = conn.cursor()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("SELECT * FROM analysis_result WHERE id = %s", (result_id,))
             result = cursor.fetchone()
             
@@ -972,7 +972,7 @@ async def get_districts(city: Optional[str] = None):
     try:
         # 使用DBConnectionManager替代直接调用get_db_connection
         with DBConnectionManager() as conn:
-            cursor = conn.cursor()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             query = "SELECT DISTINCT h.location_qu FROM house_info h"
             params = []
@@ -997,7 +997,7 @@ async def get_summary_statistics(city: Optional[str] = None, auth_user: dict = D
     """获取租房市场概览统计"""
     try:
         with DBConnectionManager() as conn:
-            cursor = conn.cursor()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             # 准备查询和参数
             query_params = []
@@ -1123,7 +1123,7 @@ async def startup_event():
     try:
         # 使用上下文管理器更安全地管理数据库连接
         with DBConnectionManager() as conn:
-            cursor = conn.cursor()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             # 检查ip_settings表是否存在
             cursor.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'ip_settings')")
@@ -1202,7 +1202,7 @@ async def create_selenium_crawl_task(task_info: CrawlTaskCreate, background_task
 def get_system_settings() -> SystemSettings:
     """获取系统设置"""
     with DBConnectionManager() as conn:
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         try:
             # 获取最新设置
             cursor.execute(
@@ -1240,7 +1240,7 @@ def get_system_settings() -> SystemSettings:
 def update_system_settings(settings: SystemSettings) -> bool:
     """更新系统设置"""
     with DBConnectionManager() as conn:
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         try:
             # 更新设置为最新值
             settings.lastUpdated = datetime.datetime.now()
@@ -1314,7 +1314,7 @@ def get_system_info():
     # 尝试获取数据库连接并查询数据
     try:
         with DBConnectionManager() as conn:
-            cursor = conn.cursor()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             # 获取用户数量
             cursor.execute("SELECT COUNT(*) FROM users")
@@ -1360,7 +1360,7 @@ async def purge_data(auth_user: dict = Depends(auth.get_current_user), request: 
             
         # 打开数据库连接
         with DBConnectionManager() as conn:
-            cursor = conn.cursor()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             # 检查管理员权限
             try:
@@ -1528,7 +1528,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # 检查表是否存在的辅助函数
 def table_exists(conn, table_name):
-    cursor = conn.cursor()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
     try:
         cursor.execute(f"""
             SELECT EXISTS (
@@ -2192,7 +2192,7 @@ async def get_dashboard_stats(auth_user: dict = Depends(auth.get_current_user)):
     """获取仪表盘统计数据"""
     try:
         with DBConnectionManager() as conn:
-            cursor = conn.cursor()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             # 获取房源总数
             cursor.execute("SELECT COUNT(*) FROM house_info")
@@ -2265,7 +2265,7 @@ async def delete_task(task_id: int, auth_user: dict = Depends(auth.get_current_u
     conn = None
     try:
         with DBConnectionManager() as conn:
-            cursor = conn.cursor()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             # 首先检查任务是否存在
             cursor.execute("SELECT id, status FROM crawl_task WHERE id = %s", (task_id,))
@@ -2400,7 +2400,7 @@ async def export_houses(
     try:
         # 使用上下文管理器获取数据库连接
         with DBConnectionManager() as conn:
-            cursor = conn.cursor()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             # 构建查询
             query = "SELECT h.* FROM house_info h"

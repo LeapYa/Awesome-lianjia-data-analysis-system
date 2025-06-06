@@ -41,13 +41,14 @@ COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
 
 --
 -- Name: decrypt_email(text, text); Type: FUNCTION; Schema: public; Owner: postgres
+-- 简化版本：不再进行解密，直接返回输入值（兼容性保留）
 --
 
-CREATE FUNCTION public.decrypt_email(p_encrypted text, p_key text) RETURNS text
+CREATE OR REPLACE FUNCTION public.decrypt_email(p_encrypted text, p_key text) RETURNS text
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 BEGIN
-    RETURN convert_from(decrypt_iv(decode(p_encrypted, 'hex'), p_key::bytea, '0000000000000000'::bytea, 'aes-cbc'), 'UTF8');
+    RETURN p_encrypted;
 END;
 $$;
 
@@ -56,13 +57,14 @@ ALTER FUNCTION public.decrypt_email(p_encrypted text, p_key text) OWNER TO postg
 
 --
 -- Name: encrypt_email(text, text); Type: FUNCTION; Schema: public; Owner: postgres
+-- 简化版本：不再进行加密，直接返回输入值（兼容性保留）
 --
 
-CREATE FUNCTION public.encrypt_email(p_email text, p_key text) RETURNS text
+CREATE OR REPLACE FUNCTION public.encrypt_email(p_email text, p_key text) RETURNS text
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 BEGIN
-    RETURN encode(encrypt_iv(p_email::bytea, p_key::bytea, '0000000000000000'::bytea, 'aes-cbc'), 'hex');
+    RETURN p_email;
 END;
 $$;
 
@@ -914,7 +916,7 @@ COPY public.user_tokens (id, user_id, token, expires_at, created_at) FROM stdin;
 --
 
 COPY public.users (id, username, email, email_hash, password_hash, is_active, is_admin, created_at, last_login, avatar) FROM stdin;
-1	admin	4f4414e9975a59a15947883b45b7793ed765e8cbb9e21f01ec948fda366d0bb8	258d8dc916db8cea2cafb6c3cd0cb0246efe061421dbd83ec3a350428cabda4f	$2b$12$Kf2eMGF4MKNZBGhoy.HeMOddKNSHjZPjVeSqUl/Z6djA2UES83Wrq	t	t	2025-05-13 03:22:51.7628	2025-05-14 11:34:37.047943	/static/avatars/admin_20250513042437.png
+1	admin	admin@example.com	258d8dc916db8cea2cafb6c3cd0cb0246efe061421dbd83ec3a350428cabda4f	$2b$12$Kf2eMGF4MKNZBGhoy.HeMOddKNSHjZPjVeSqUl/Z6djA2UES83Wrq	t	t	2025-05-13 03:22:51.7628	2025-05-14 11:34:37.047943	/static/avatars/admin_20250513042437.png
 \.
 
 
