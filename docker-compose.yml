@@ -36,6 +36,7 @@ services:
       - ./verification_sessions:/app/verification_sessions
       - ./verification_cookies:/app/verification_cookies
       - ./captcha_data:/app/captcha_data
+      - ./static:/app/static
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432

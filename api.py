@@ -1511,6 +1511,18 @@ async def export_data(auth_user: dict = Depends(auth.get_current_user)):
         cursor.close()
         conn.close()
 
+# 确保静态文件目录存在
+static_dir = "static"
+avatars_dir = os.path.join(static_dir, "avatars")
+
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir)
+    logger.info(f"创建静态文件目录: {static_dir}")
+
+if not os.path.exists(avatars_dir):
+    os.makedirs(avatars_dir)
+    logger.info(f"创建头像目录: {avatars_dir}")
+
 # 设置静态文件服务
 app.mount("/static", StaticFiles(directory="static"), name="static")
 

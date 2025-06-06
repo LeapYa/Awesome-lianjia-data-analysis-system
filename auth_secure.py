@@ -778,6 +778,12 @@ async def save_avatar(avatar_data: str, username: str) -> str:
         
         # 保存路径
         avatar_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "avatars")
+        
+        # 确保目录存在
+        if not os.path.exists(avatar_dir):
+            os.makedirs(avatar_dir)
+            logger.info(f"创建头像目录: {avatar_dir}")
+        
         filepath = os.path.join(avatar_dir, filename)
         
         # 保存文件
