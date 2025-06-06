@@ -8,7 +8,7 @@ from typing import List, Optional
 import logging
 from datetime import datetime
 import psycopg2
-from auth_secure import decrypt_email, get_db_connection
+from db_utils import decrypt_email, get_db_connection, release_db_connection
 import random
 import json
 
@@ -554,6 +554,7 @@ class EmailSender:
         Returns:
             str: 解密后的邮箱地址，如果失败返回None
         """
+        conn = None
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -563,7 +564,7 @@ class EmailSender:
             
             if result:
                 encrypted_email = result[0]
-                return decrypt_email(conn, encrypted_email)
+                return decrypt_email(encrypted_email)
             
             return None
             
@@ -571,8 +572,8 @@ class EmailSender:
             logger.error(f"获取用户邮箱失败: {e}")
             return None
         finally:
-            if 'conn' in locals():
-                conn.close()
+            if conn:
+                release_db_connection(conn)
     
     def get_template(self, language: str, template_type: str, task_type: str = None):
         """

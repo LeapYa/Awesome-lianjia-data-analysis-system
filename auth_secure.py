@@ -22,8 +22,10 @@ import bcrypt
 import db_config
 import db_utils
 
-# 导入邮件和验证码工具
-from email_utils import email_sender, verification_manager
+def get_email_utils():
+    """动态导入邮件工具，避免循环导入"""
+    from email_utils import email_sender, verification_manager
+    return email_sender, verification_manager
 
 # 确保logs目录存在
 logs_dir = "logs"
@@ -416,6 +418,7 @@ async def register(user_data: UserCreate):
         
         # 发送欢迎邮件
         try:
+            email_sender, _ = get_email_utils()
             email_sender.send_welcome_email(user_data.email, user_data.username, user_data.language)
             logger.info(f"欢迎邮件发送成功: {user_data.email}")
         except Exception as e:
@@ -442,6 +445,7 @@ async def forgot_password(reset_data: PasswordReset):
     """忘记密码 - 发送验证码"""
     try:
         # 发送密码重置验证码（无论用户是否存在都发送，为了安全）
+        _, verification_manager = get_email_utils()
         success = verification_manager.send_verification_code(
             reset_data.email, 
             'password_reset',
@@ -466,6 +470,7 @@ async def reset_password(reset_data: PasswordResetConfirm):
     conn = db_config.get_connection(auth_pool)
     try:
         # 先验证验证码
+        _, verification_manager = get_email_utils()
         is_valid = verification_manager.verify_code(
             reset_data.email,
             reset_data.code,
@@ -819,6 +824,7 @@ async def send_verification_code(request: VerificationCodeRequest):
     """发送邮箱验证码"""
     try:
         # 发送验证码
+        _, verification_manager = get_email_utils()
         success = verification_manager.send_verification_code(
             request.email, 
             request.code_type,
@@ -848,6 +854,7 @@ async def verify_verification_code(request: VerificationCodeVerify):
     """验证验证码"""
     try:
         # 验证验证码
+        _, verification_manager = get_email_utils()
         is_valid = verification_manager.verify_code(
             request.email,
             request.code,

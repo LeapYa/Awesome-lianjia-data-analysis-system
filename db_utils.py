@@ -5,6 +5,7 @@
 import os
 import logging
 import db_config
+from psycopg2.extras import RealDictCursor
 
 # 确保logs目录存在
 logs_dir = "logs"
@@ -21,6 +22,74 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger("db_utils")
+
+EMAIL_ENCRYPTION_KEY = os.getenv("EMAIL_ENCRYPTION_KEY", "very_secure_encryption_key_change_me")
+
+def get_db_connection():
+    """获取通用数据库连接"""
+    try:
+        # 创建通用连接池
+        if not hasattr(get_db_connection, 'pool'):
+            get_db_connection.pool = db_config.create_pool(
+                min_conn=1, 
+                max_conn=5, 
+                application_name="db_utils"
+            )
+        
+        conn = db_config.get_connection(get_db_connection.pool)
+        conn.cursor_factory = RealDictCursor
+        return conn
+    except Exception as e:
+        logger.error(f"获取数据库连接失败: {str(e)}")
+        raise
+
+def release_db_connection(conn):
+    """释放数据库连接"""
+    try:
+        if hasattr(get_db_connection, 'pool') and get_db_connection.pool:
+            db_config.release_connection(get_db_connection.pool, conn)
+    except Exception as e:
+        logger.error(f"释放数据库连接失败: {str(e)}")
+
+def decrypt_email(encrypted_email: str) -> str:
+    """解密邮箱地址"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cursor.execute(
+            "SELECT decrypt_email(%s, %s) as decrypted", 
+            (encrypted_email, EMAIL_ENCRYPTION_KEY)
+        )
+        result = cursor.fetchone()
+        return result["decrypted"]
+    except Exception as e:
+        logger.error(f"邮箱解密失败: {str(e)}")
+        raise
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+def encrypt_email(email: str) -> str:
+    """加密邮箱地址"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cursor.execute(
+            "SELECT encrypt_email(%s, %s) as encrypted", 
+            (email, EMAIL_ENCRYPTION_KEY)
+        )
+        result = cursor.fetchone()
+        return result["encrypted"]
+    except Exception as e:
+        logger.error(f"邮箱加密失败: {str(e)}")
+        raise
+    finally:
+        if conn:
+            release_db_connection(conn)
 
 def with_db_connection(connection_pool):
     """
