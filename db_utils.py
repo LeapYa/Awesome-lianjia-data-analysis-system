@@ -59,6 +59,10 @@ def get_email(stored_email: str) -> str:
     """直接返回存储的邮箱"""
     return stored_email
 
+def decrypt_email(encrypted_email: str) -> str:
+    """解密邮箱地址（目前直接返回明文，保持兼容性）"""
+    return encrypted_email
+
 def with_db_connection(connection_pool):
     """
     装饰器工厂函数，返回一个确保数据库连接在使用后被正确归还到连接池的装饰器

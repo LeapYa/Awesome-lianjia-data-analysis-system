@@ -188,6 +188,8 @@ export default {
         return t('auth.register');
       } else if (route.name === 'ForgotPassword') {
         return t('auth.forgotPassword');
+      } else if (route.name === 'ResetPassword') {
+        return t('auth.resetPasswordTitle');
       }
       
       // 其他路由按名称匹配

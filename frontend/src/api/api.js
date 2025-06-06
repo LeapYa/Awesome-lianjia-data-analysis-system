@@ -316,5 +316,14 @@ export default {
       params: { url: imageUrl },
       timeout: 10000  // 10秒超时
     });
+  },
+  
+  // 验证码相关API
+  sendVerificationCode(data) {
+    return api.post('/auth/send-verification-code', data);
+  },
+  
+  verifyCode(data) {
+    return api.post('/auth/verify-code', data);
   }
 }; 

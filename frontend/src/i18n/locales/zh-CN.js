@@ -66,7 +66,8 @@ export default {
     analysis: '数据分析',
     UserProfile: '个人资料',
     UserSettings: '账户设置',
-    SystemSettings: '系统设置'
+    SystemSettings: '系统设置',
+    ResetPassword: '重置密码'
   },
   auth: {
     login: '登录',

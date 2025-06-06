@@ -31,6 +31,10 @@ from PIL import Image
 import csv
 from urllib.parse import quote
 
+# 加载环境变量
+from dotenv import load_dotenv
+load_dotenv()
+
 # 导入爬虫和数据处理模块
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import selenium_spider as spider

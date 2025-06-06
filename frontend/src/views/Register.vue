@@ -29,6 +29,30 @@
             </template>
           </el-input>
         </el-form-item>
+
+        <el-form-item prop="verificationCode">
+          <div class="verification-input-group">
+            <el-input 
+              v-model="formData.verificationCode" 
+              :placeholder="$t('auth.verificationCode')"
+              maxlength="6"
+              class="verification-code-input"
+            >
+              <template #prefix>
+                <el-icon><Key /></el-icon>
+              </template>
+            </el-input>
+            <el-button 
+              type="primary" 
+              @click="sendVerificationCode" 
+              :loading="sendingCode"
+              :disabled="!formData.email || sendingCode || resendDisabled"
+              class="send-code-btn"
+            >
+              {{ resendDisabled ? `${resendCountdown}s` : $t('auth.sendVerificationCode') }}
+            </el-button>
+          </div>
+        </el-form-item>
         
         <el-form-item prop="password">
           <el-input 
@@ -80,7 +104,7 @@
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { User, Lock, Message } from '@element-plus/icons-vue';
+import { User, Lock, Message, Key } from '@element-plus/icons-vue';
 import api from '../api/api';
 
 export default {
@@ -89,17 +113,22 @@ export default {
   components: {
     User,
     Lock,
-    Message
+    Message,
+    Key
   },
   
   setup() {
     const router = useRouter();
     const registerForm = ref(null);
     const loading = ref(false);
+    const sendingCode = ref(false);
+    const resendDisabled = ref(false);
+    const resendCountdown = ref(0);
     
     const formData = reactive({
       username: '',
       email: '',
+      verificationCode: '',
       password: '',
       confirmPassword: '',
       agreement: false
@@ -143,6 +172,10 @@ export default {
         { required: true, message: '请输入邮箱地址', trigger: 'blur' },
         { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
       ],
+      verificationCode: [
+        { required: true, message: '请输入验证码', trigger: 'blur' },
+        { len: 6, message: '验证码为6位数字', trigger: 'blur' }
+      ],
       password: [
         { required: true, validator: validatePass, trigger: 'blur' },
         { min: 6, max: 20, message: '密码长度应为6-20个字符', trigger: 'blur' }
@@ -154,6 +187,55 @@ export default {
         { required: true, validator: validateAgreement, trigger: 'change' }
       ]
     };
+
+    // 发送验证码
+    const sendVerificationCode = async () => {
+      if (!formData.email) {
+        ElMessage.warning('请先输入邮箱地址');
+        return;
+      }
+
+      // 验证邮箱格式
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        ElMessage.warning('请输入正确的邮箱地址');
+        return;
+      }
+
+      try {
+        sendingCode.value = true;
+        
+        await api.sendVerificationCode({
+          email: formData.email,
+          code_type: 'email_verification'
+        });
+        
+        ElMessage.success('验证码已发送，请查收邮件');
+        
+        // 开始倒计时
+        startResendCountdown();
+        
+      } catch (error) {
+        ElMessage.error('发送验证码失败：' + (error.message || '未知错误'));
+      } finally {
+        sendingCode.value = false;
+      }
+    };
+
+    // 倒计时逻辑
+    const startResendCountdown = () => {
+      resendDisabled.value = true;
+      resendCountdown.value = 60;
+      
+      const timer = setInterval(() => {
+        resendCountdown.value--;
+        
+        if (resendCountdown.value <= 0) {
+          clearInterval(timer);
+          resendDisabled.value = false;
+        }
+      }, 1000);
+    };
     
     const handleRegister = async () => {
       if (!registerForm.value) return;
@@ -163,11 +245,11 @@ export default {
           try {
             loading.value = true;
             
-            // 调用注册API
             const data = {
               username: formData.username,
               email: formData.email,
-              password: formData.password
+              password: formData.password,
+              verification_code: formData.verificationCode
             };
             
             await api.register(data);
@@ -191,6 +273,10 @@ export default {
       formData,
       rules,
       loading,
+      sendingCode,
+      resendDisabled,
+      resendCountdown,
+      sendVerificationCode,
       handleRegister
     };
   }
@@ -236,6 +322,20 @@ export default {
 
 .register-form {
   padding: 0 24px;
+}
+
+.verification-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.verification-code-input {
+  flex: 1;
+}
+
+.send-code-btn {
+  min-width: 120px;
+  font-size: 12px;
 }
 
 .form-actions {

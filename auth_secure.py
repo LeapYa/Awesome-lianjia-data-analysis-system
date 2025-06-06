@@ -94,6 +94,7 @@ class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
+    verification_code: str
     language: Optional[str] = 'zh-CN'  # 添加语言参数
 
 class UserLogin(BaseModel):
@@ -337,6 +338,20 @@ async def register(user_data: UserCreate):
     """用户注册"""
     conn = db_config.get_connection(auth_pool)
     try:
+        # 先验证验证码
+        _, verification_manager = get_email_utils()
+        is_valid = verification_manager.verify_code(
+            user_data.email,
+            user_data.verification_code,
+            'email_verification'
+        )
+        
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="验证码错误或已过期"
+            )
+        
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         # 检查用户名是否已存在

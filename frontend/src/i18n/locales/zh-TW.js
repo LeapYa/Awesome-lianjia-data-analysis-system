@@ -66,7 +66,8 @@ export default {
     analysis: '數據分析',
     userprofile: '個人資料',
     usersettings: '賬戶設置',
-    systemsettings: '系統設置'
+    systemsettings: '系統設置',
+    ResetPassword: '重置密碼'
   },
   auth: {
     login: '登錄',

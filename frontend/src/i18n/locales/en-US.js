@@ -68,7 +68,8 @@ export default {
     analysis: 'Data Analysis',
     userprofile: 'User Profile',
     usersettings: 'User Settings',
-    systemsettings: 'System Settings'
+    systemsettings: 'System Settings',
+    ResetPassword: 'Reset Password'
   },
   auth: {
     login: 'Login',

@@ -6,7 +6,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 from typing import List, Optional
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import psycopg2
 from db_utils import decrypt_email, get_db_connection, release_db_connection
 import random
@@ -468,7 +468,7 @@ class EmailSender:
         }
         
         if not all([self.smtp_email, self.smtp_password]):
-            logger.warning("邮件配置不完整，邮件功能将无法使用")
+            logger.debug("邮件配置不完整，将使用开发模式（验证码会在日志中显示）")
     
     def _create_smtp_connection(self):
         """创建SMTP连接"""
@@ -703,7 +703,7 @@ class VerificationCodeManager:
     def store_code(self, email: str, code_type: str = 'email_verification') -> str:
         """存储验证码，返回生成的验证码"""
         code = self.generate_code()
-        expires_at = datetime.datetime.now() + datetime.timedelta(minutes=5)  # 5分钟有效期
+        expires_at = datetime.now() + timedelta(minutes=5)  # 5分钟有效期
         
         key = f"{email}:{code_type}"
         self.codes[key] = {
@@ -727,7 +727,7 @@ class VerificationCodeManager:
         code_info = self.codes[key]
         
         # 检查是否过期
-        if datetime.datetime.now() > code_info['expires_at']:
+        if datetime.now() > code_info['expires_at']:
             logging.warning(f"验证码已过期: {email}")
             del self.codes[key]
             return False
@@ -751,7 +751,7 @@ class VerificationCodeManager:
     
     def clean_expired_codes(self):
         """清理过期的验证码"""
-        now = datetime.datetime.now()
+        now = datetime.now()
         expired_keys = [
             key for key, code_info in self.codes.items()
             if now > code_info['expires_at']
@@ -764,13 +764,33 @@ class VerificationCodeManager:
             logging.info(f"清理了 {len(expired_keys)} 个过期验证码")
     
     def send_verification_code(self, email: str, code_type: str = 'email_verification', language: str = 'zh-CN') -> bool:
-        """发送验证码邮件"""
+        """
+        发送验证码邮件
+        
+        Args:
+            email: 收件人邮箱
+            code_type: 验证码类型
+            language: 语言代码 (从前端传递)
+            
+        Returns:
+            bool: 发送是否成功
+        """
         try:
-            # 清理过期验证码
             self.clean_expired_codes()
             
             # 生成并存储验证码
             code = self.store_code(email, code_type)
+            
+            # 检查邮件配置
+            placeholder_emails = ['your_email@163.com', 'your_email@gmail.com', 'example@email.com']
+            placeholder_passwords = ['your_authorization_code', 'your_password', 'your_app_password']
+            
+            if (not email_sender.smtp_email or not email_sender.smtp_password or 
+                email_sender.smtp_email in placeholder_emails or 
+                email_sender.smtp_password in placeholder_passwords):
+                logger.warning(f"邮件配置不完整或使用占位符，验证码已生成但无法发送邮件")
+                logger.info(f"📧 开发模式：{email} 的验证码是: {code} (类型: {code_type})")
+                return True
             
             # 获取相应语言的模板
             template = email_sender.get_template(language, 'verification_code', code_type)
