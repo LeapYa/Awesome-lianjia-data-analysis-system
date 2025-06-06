@@ -13,6 +13,9 @@ RUN npm install
 # 复制前端源代码
 COPY frontend/ .
 
+# 设置环境变量，覆盖.env文件
+ENV VUE_APP_API_BASE_URL=/api
+
 # 构建前端应用
 RUN npm run build
 
