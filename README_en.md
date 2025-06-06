@@ -37,6 +37,13 @@ The frontend is built with Vue3 and Element Plus for the user interface, impleme
 
 **🚀 Ready to Use**: The project comes pre-configured with all environment settings. Simply clone the code and use `docker-compose up -d` to start the system with one command, no complex configuration required.
 
+## Data Source
+
+> 
+> This project primarily crawls rental data from **Beike** (ke.com), and theoretically also supports **Lianjia** (lianjia.com) data (Beike is a platform under Lianjia, with similar technical architecture and anti-crawling mechanisms).
+> 
+> The system is configured to crawl Beike data by default. To switch to Lianjia, simply modify the domain in the configuration. The data formats are fully compatible.
+
 ## Key Features
 
 ### Data Collection Features

@@ -2256,10 +2256,9 @@ def process_single_house(house_item, city_code, task_id, index, total):
         logger.error(f"处理第 {index+1} 个房源时出错: {str(item_err)}")
         return None
 
-# 添加一个处理整个页面房源的函数
 def process_house_items(driver, task_id):
     """
-    处理页面上的所有房源项目，使用批量保存减少数据库连接消耗
+    处理页面上的房源项目，提取房源信息并保存到数据库
     
     Args:
         driver: DrissionPage对象
@@ -2277,6 +2276,11 @@ def process_house_items(driver, task_id):
         # 获取所有房源元素
         house_items = driver.eles('css:div.content__list--item')
         logger.info(f"在页面上找到 {len(house_items)} 个房源项目")
+        
+        # 如果没有找到房源，直接返回
+        if len(house_items) == 0:
+            logger.warning("页面上没有找到任何房源项目，可能是被反爬虫拦截了！请更换IP后重试")
+            return 0, 0
         
         # 使用线程池并行处理房源信息提取
         max_workers = min(10, len(house_items))  # 设置最大线程数，避免创建过多线程
